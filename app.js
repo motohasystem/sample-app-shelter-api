@@ -60,26 +60,61 @@ function getDisasterTypes(properties) {
     return disasters;
 }
 
-// 主要な災害アイコンを取得（最初の対応災害）
-function getPrimaryIcon(disasters) {
-    if (disasters.length === 0) return '📍';
-    return DISASTER_ICONS[disasters[0]] || '📍';
-}
+// カスタムアイコンの作成（同心円配置）
+function createCustomIcon(disasters) {
+    // 中心ピンと周囲のアイコンを配置
+    let html = '<div class="marker-container">';
 
-// すべての対応災害アイコンを結合
-function getCombinedIcons(disasters) {
-    if (disasters.length === 0) return '📍';
-    return disasters.map(d => DISASTER_ICONS[d]).join('');
-}
+    // 中心ピン
+    html += '<div class="center-pin">📍</div>';
 
-// カスタムアイコンの作成
-function createCustomIcon(iconText) {
+    if (disasters.length > 0) {
+        // 同心円の設定
+        const circles = [
+            { radius: 39, maxIcons: 6 },  // 内側の円
+            { radius: 59, maxIcons: 8 },  // 中間の円
+            { radius: 79, maxIcons: 12 }  // 外側の円
+        ];
+
+        let remainingIcons = [...disasters];
+        let iconIndex = 0;
+
+        // 各同心円にアイコンを配置
+        for (const circle of circles) {
+            if (remainingIcons.length === 0) break;
+
+            // この円に配置するアイコンの数を決定
+            const iconsInThisCircle = Math.min(circle.maxIcons, remainingIcons.length);
+            const angleStep = 360 / iconsInThisCircle;
+
+            // この円周上にアイコンを配置
+            for (let i = 0; i < iconsInThisCircle; i++) {
+                const angle = angleStep * i - 90; // -90度で12時方向から開始
+                const angleRad = angle * (Math.PI / 180); // ラジアンに変換
+
+                // 円周上の位置を計算
+                const x = circle.radius * Math.cos(angleRad);
+                const y = circle.radius * Math.sin(angleRad);
+
+                const disaster = remainingIcons[i];
+                const icon = DISASTER_ICONS[disaster] || '📍';
+                html += `<div class="disaster-icon" style="left: calc(50% + ${x}px); top: calc(50% + ${y}px);">${icon}</div>`;
+                iconIndex++;
+            }
+
+            // 配置済みのアイコンを削除
+            remainingIcons = remainingIcons.slice(iconsInThisCircle);
+        }
+    }
+
+    html += '</div>';
+
     return L.divIcon({
-        html: `<div style="font-size: 24px; text-align: center; text-shadow: 0 0 3px white, 0 0 5px white;">${iconText}</div>`,
-        className: 'custom-icon',
-        iconSize: [30, 30],
-        iconAnchor: [15, 15],
-        popupAnchor: [0, -15]
+        html: html,
+        className: 'custom-marker-icon',
+        iconSize: [200, 200],  // サイズを大きく（外側の円に対応）
+        iconAnchor: [100, 100],   // アンカーを中心に
+        popupAnchor: [0, -100]   // ポップアップ位置を調整
     });
 }
 
@@ -141,9 +176,8 @@ function displaySheltersOnMap(geojson) {
         // 対応災害種別を取得
         const disasters = getDisasterTypes(properties);
 
-        // アイコンを取得
-        const iconText = getCombinedIcons(disasters);
-        const customIcon = createCustomIcon(iconText);
+        // カスタムアイコンを作成（円周配置）
+        const customIcon = createCustomIcon(disasters);
 
         // マーカーを作成
         const marker = L.marker([lat, lng], { icon: customIcon });
