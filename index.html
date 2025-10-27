@@ -21,9 +21,21 @@
 
         <div class="controls">
             <div class="control-group">
-                <label for="cityCode">団体コード:</label>
-                <input type="text" id="cityCode" placeholder="例: 011002 (札幌市)" value="011002">
-                <button id="loadData">データ読み込み</button>
+                <label for="prefecture">都道府県:</label>
+                <select id="prefecture">
+                    <option value="">-- 都道府県を選択 --</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="city">市区町村:</label>
+                <select id="city" disabled>
+                    <option value="">-- 都道府県を選択してください --</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <button id="loadData" disabled>データ読み込み</button>
             </div>
 
             <div class="legend">

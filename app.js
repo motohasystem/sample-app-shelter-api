@@ -13,6 +13,7 @@ const DISASTER_ICONS = {
 // グローバル変数
 let map;
 let markersLayer;
+let masterData = null; // code-to-city.jsonのデータを保持
 
 // 地図の初期化
 function initMap() {
@@ -189,35 +190,128 @@ async function loadShelterData(cityCode) {
     }
 }
 
+// マスターデータ（code-to-city.json）を読み込み
+async function loadMasterData() {
+    try {
+        showStatus('都道府県・市区町村データを読み込み中...', 'loading');
+        const response = await fetch('https://motohasystem.github.io/jp-shelter-api/api/v0/code-to-city.json');
+
+        if (!response.ok) {
+            throw new Error('マスターデータの取得に失敗しました');
+        }
+
+        masterData = await response.json();
+        populatePrefectureSelector();
+        showStatus('', '');
+    } catch (error) {
+        console.error('Error loading master data:', error);
+        showStatus(`エラー: ${error.message}`, 'error');
+    }
+}
+
+// 都道府県セレクトボックスを生成
+function populatePrefectureSelector() {
+    const prefectureSelect = document.getElementById('prefecture');
+
+    // 都道府県コードでソート
+    const prefectureCodes = Object.keys(masterData).sort();
+
+    prefectureCodes.forEach(code => {
+        const prefecture = masterData[code];
+        const option = document.createElement('option');
+        option.value = code;
+        option.textContent = prefecture.name;
+        prefectureSelect.appendChild(option);
+    });
+}
+
+// 市区町村セレクトボックスを更新
+function updateCitySelector(prefectureCode) {
+    const citySelect = document.getElementById('city');
+    const loadButton = document.getElementById('loadData');
+
+    // 既存のオプションをクリア
+    citySelect.innerHTML = '<option value="">-- 市区町村を選択 --</option>';
+    citySelect.disabled = true;
+    loadButton.disabled = true;
+
+    if (!prefectureCode) {
+        citySelect.innerHTML = '<option value="">-- 都道府県を選択してください --</option>';
+        return;
+    }
+
+    const prefecture = masterData[prefectureCode];
+    if (!prefecture || !prefecture.cities) {
+        showStatus('市区町村データが見つかりません', 'error');
+        return;
+    }
+
+    // 市区町村を名前順でソート
+    const cities = Object.values(prefecture.cities).sort((a, b) =>
+        a.name.localeCompare(b.name)
+    );
+
+    cities.forEach(city => {
+        const option = document.createElement('option');
+        option.value = city.code;
+        option.textContent = city.name.replace(prefecture.name, ''); // 都道府県名を除去
+        citySelect.appendChild(option);
+    });
+
+    citySelect.disabled = false;
+}
+
 // イベントリスナーの設定
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // 地図の初期化
     initMap();
 
+    // マスターデータの読み込み
+    await loadMasterData();
+
+    // 都道府県選択時のイベント
+    document.getElementById('prefecture').addEventListener('change', (e) => {
+        const prefectureCode = e.target.value;
+        updateCitySelector(prefectureCode);
+    });
+
+    // 市区町村選択時のイベント
+    document.getElementById('city').addEventListener('change', (e) => {
+        const cityCode = e.target.value;
+        const loadButton = document.getElementById('loadData');
+
+        if (cityCode) {
+            loadButton.disabled = false;
+        } else {
+            loadButton.disabled = true;
+        }
+    });
+
     // データ読み込みボタン
     document.getElementById('loadData').addEventListener('click', () => {
-        const cityCode = document.getElementById('cityCode').value.trim();
+        const cityCode = document.getElementById('city').value;
 
         if (!cityCode) {
-            showStatus('団体コードを入力してください', 'error');
-            return;
-        }
-
-        if (!/^\d{6}$/.test(cityCode)) {
-            showStatus('団体コードは6桁の数字で入力してください', 'error');
+            showStatus('市区町村を選択してください', 'error');
             return;
         }
 
         loadShelterData(cityCode);
     });
 
-    // Enterキーでも読み込み
-    document.getElementById('cityCode').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            document.getElementById('loadData').click();
+    // デフォルトで北海道札幌市を選択してデータを読み込み
+    if (masterData) {
+        document.getElementById('prefecture').value = '01'; // 北海道
+        updateCitySelector('01');
+        // 札幌市を探して選択
+        const citySelect = document.getElementById('city');
+        for (let option of citySelect.options) {
+            if (option.value === '011002') {
+                citySelect.value = '011002';
+                document.getElementById('loadData').disabled = false;
+                loadShelterData('011002');
+                break;
+            }
         }
-    });
-
-    // デフォルトで札幌市のデータを読み込み
-    loadShelterData('011002');
+    }
 });
