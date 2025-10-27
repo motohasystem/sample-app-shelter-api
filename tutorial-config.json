@@ -1,0 +1,22 @@
+{
+  "pages": [
+    {
+      "url": "pages/page1.html"
+    },
+    {
+      "url": "pages/page2.html",
+      "highlightId": "map"
+    },
+    {
+      "url": "pages/page3.html",
+      "highlightId": "prefecture"
+    },
+    {
+      "url": "pages/page4.html",
+      "highlightId": "getCurrentLocation"
+    },
+    {
+      "url": "pages/page5.html"
+    }
+  ]
+}
