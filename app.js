@@ -71,9 +71,9 @@ function createCustomIcon(disasters) {
     if (disasters.length > 0) {
         // 同心円の設定
         const circles = [
-            { radius: 25, maxIcons: 6 },  // 内側の円
-            { radius: 45, maxIcons: 8 },  // 中間の円
-            { radius: 65, maxIcons: 12 }  // 外側の円
+            { radius: 39, maxIcons: 6 },  // 内側の円
+            { radius: 59, maxIcons: 8 },  // 中間の円
+            { radius: 79, maxIcons: 12 }  // 外側の円
         ];
 
         let remainingIcons = [...disasters];
@@ -112,9 +112,9 @@ function createCustomIcon(disasters) {
     return L.divIcon({
         html: html,
         className: 'custom-marker-icon',
-        iconSize: [140, 140],  // サイズを大きく（外側の円に対応）
-        iconAnchor: [70, 70],   // アンカーを中心に
-        popupAnchor: [0, -70]   // ポップアップ位置を調整
+        iconSize: [200, 200],  // サイズを大きく（外側の円に対応）
+        iconAnchor: [100, 100],   // アンカーを中心に
+        popupAnchor: [0, -100]   // ポップアップ位置を調整
     });
 }
 
