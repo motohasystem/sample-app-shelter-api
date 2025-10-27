@@ -60,26 +60,40 @@ function getDisasterTypes(properties) {
     return disasters;
 }
 
-// 主要な災害アイコンを取得（最初の対応災害）
-function getPrimaryIcon(disasters) {
-    if (disasters.length === 0) return '📍';
-    return DISASTER_ICONS[disasters[0]] || '📍';
-}
+// カスタムアイコンの作成（円周配置）
+function createCustomIcon(disasters) {
+    // 中心ピンと周囲のアイコンを配置
+    let html = '<div class="marker-container">';
 
-// すべての対応災害アイコンを結合
-function getCombinedIcons(disasters) {
-    if (disasters.length === 0) return '📍';
-    return disasters.map(d => DISASTER_ICONS[d]).join('');
-}
+    // 中心ピン
+    html += '<div class="center-pin">📍</div>';
 
-// カスタムアイコンの作成
-function createCustomIcon(iconText) {
+    if (disasters.length > 0) {
+        // 各災害アイコンを円周上に配置
+        const radius = 25; // 円の半径（ピクセル）
+        const angleStep = 360 / disasters.length; // 等間隔の角度
+
+        disasters.forEach((disaster, index) => {
+            const angle = angleStep * index - 90; // -90度で12時方向から開始
+            const angleRad = angle * (Math.PI / 180); // ラジアンに変換
+
+            // 円周上の位置を計算
+            const x = radius * Math.cos(angleRad);
+            const y = radius * Math.sin(angleRad);
+
+            const icon = DISASTER_ICONS[disaster] || '📍';
+            html += `<div class="disaster-icon" style="left: ${x}px; top: ${y}px;">${icon}</div>`;
+        });
+    }
+
+    html += '</div>';
+
     return L.divIcon({
-        html: `<div style="font-size: 24px; text-align: center; text-shadow: 0 0 3px white, 0 0 5px white;">${iconText}</div>`,
-        className: 'custom-icon',
-        iconSize: [30, 30],
-        iconAnchor: [15, 15],
-        popupAnchor: [0, -15]
+        html: html,
+        className: 'custom-marker-icon',
+        iconSize: [60, 60],
+        iconAnchor: [30, 30],
+        popupAnchor: [0, -30]
     });
 }
 
@@ -141,9 +155,8 @@ function displaySheltersOnMap(geojson) {
         // 対応災害種別を取得
         const disasters = getDisasterTypes(properties);
 
-        // アイコンを取得
-        const iconText = getCombinedIcons(disasters);
-        const customIcon = createCustomIcon(iconText);
+        // カスタムアイコンを作成（円周配置）
+        const customIcon = createCustomIcon(disasters);
 
         // マーカーを作成
         const marker = L.marker([lat, lng], { icon: customIcon });
