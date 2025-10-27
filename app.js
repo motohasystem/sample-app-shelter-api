@@ -14,6 +14,7 @@ const DISASTER_ICONS = {
 let map;
 let markersLayer;
 let masterData = null; // code-to-city.jsonのデータを保持
+let currentLocationMarker = null; // 現在地マーカー
 
 // 地図の初期化
 function initMap() {
@@ -361,6 +362,134 @@ function selectAndLoadCity(cityCode) {
     }
 }
 
+// 現在位置を取得して地図を移動
+function getCurrentLocation() {
+    if (!navigator.geolocation) {
+        showStatus('お使いのブラウザは位置情報に対応していません', 'error');
+        return;
+    }
+
+    showStatus('現在位置を取得中...', 'loading');
+
+    navigator.geolocation.getCurrentPosition(
+        async (position) => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+
+            // 地図を現在位置に移動
+            map.setView([lat, lng], 14);
+
+            // 既存の現在位置マーカーを削除
+            if (currentLocationMarker) {
+                map.removeLayer(currentLocationMarker);
+            }
+
+            // 現在位置マーカーを追加
+            currentLocationMarker = L.marker([lat, lng], {
+                icon: L.divIcon({
+                    html: '<div style="font-size: 32px; text-align: center;">📍</div>',
+                    className: 'current-location-icon',
+                    iconSize: [32, 32],
+                    iconAnchor: [16, 32]
+                })
+            }).addTo(map);
+
+            currentLocationMarker.bindPopup('<b>現在地</b>').openPopup();
+
+            // 逆ジオコーディングで市区町村を特定
+            showStatus('市区町村を特定中...', 'loading');
+            try {
+                const cityCode = await getCityCodeFromLocation(lat, lng);
+                if (cityCode) {
+                    showStatus('市区町村を特定しました', 'success');
+                    selectAndLoadCity(cityCode);
+                } else {
+                    showStatus('市区町村を特定できませんでした。手動で選択してください。', 'error');
+                }
+            } catch (error) {
+                console.error('Geocoding error:', error);
+                showStatus('市区町村の特定に失敗しました。手動で選択してください。', 'error');
+            }
+        },
+        (error) => {
+            let message = '位置情報の取得に失敗しました';
+            switch (error.code) {
+                case error.PERMISSION_DENIED:
+                    message = '位置情報の使用が拒否されました';
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    message = '位置情報が利用できません';
+                    break;
+                case error.TIMEOUT:
+                    message = '位置情報の取得がタイムアウトしました';
+                    break;
+            }
+            showStatus(message, 'error');
+        }
+    );
+}
+
+// 緯度経度から市区町村コードを取得（逆ジオコーディング）
+async function getCityCodeFromLocation(lat, lng) {
+    try {
+        // Nominatim APIで逆ジオコーディング
+        const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1&accept-language=ja`,
+            {
+                headers: {
+                    'User-Agent': 'ShelterMapApp/1.0'
+                }
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error('Geocoding API request failed');
+        }
+
+        const data = await response.json();
+        const address = data.address;
+
+        if (!address) {
+            return null;
+        }
+
+        // 都道府県名と市区町村名を取得
+        const prefecture = address.province || address.state;
+        const city = address.city || address.town || address.village || address.municipality;
+
+        if (!prefecture || !city) {
+            return null;
+        }
+
+        // マスターデータから該当する市区町村コードを検索
+        return findCityCode(prefecture, city);
+    } catch (error) {
+        console.error('Reverse geocoding error:', error);
+        return null;
+    }
+}
+
+// 都道府県名と市区町村名から団体コードを検索
+function findCityCode(prefectureName, cityName) {
+    if (!masterData) return null;
+
+    // 都道府県を検索
+    for (const [prefCode, prefData] of Object.entries(masterData)) {
+        if (prefData.name.includes(prefectureName) || prefectureName.includes(prefData.name)) {
+            // 市区町村を検索
+            for (const [cityKey, cityData] of Object.entries(prefData.cities || {})) {
+                const fullCityName = cityData.name;
+                // 部分一致で検索（例：「札幌市」と「札幌市中央区」）
+                if (fullCityName.includes(cityName) || cityName.includes(fullCityName.replace(prefData.name, ''))) {
+                    return cityData.code;
+                }
+            }
+        }
+    }
+
+    return null;
+}
+
 // イベントリスナーの設定
 document.addEventListener('DOMContentLoaded', async () => {
     // 地図の初期化
@@ -401,6 +530,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         loadShelterData(cityCode);
+    });
+
+    // 現在地ボタン
+    document.getElementById('getCurrentLocation').addEventListener('click', () => {
+        getCurrentLocation();
     });
 
     // URLパラメータまたはデフォルトで初期表示
