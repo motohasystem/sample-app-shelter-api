@@ -98,7 +98,7 @@ function createCustomIcon(disasters) {
 
                 const disaster = remainingIcons[i];
                 const icon = DISASTER_ICONS[disaster] || '📍';
-                html += `<div class="disaster-icon" style="left: ${x}px; top: ${y}px;">${icon}</div>`;
+                html += `<div class="disaster-icon" style="left: calc(50% + ${x}px); top: calc(50% + ${y}px);">${icon}</div>`;
                 iconIndex++;
             }
 
