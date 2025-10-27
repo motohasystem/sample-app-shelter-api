@@ -101,6 +101,19 @@ header p {
     cursor: not-allowed;
 }
 
+.control-group .location-btn {
+    background: #10b981;
+    margin-left: 10px;
+}
+
+.control-group .location-btn:hover {
+    background: #059669;
+}
+
+.control-group .location-btn:active {
+    background: #047857;
+}
+
 .legend {
     border-top: 2px solid #eee;
     padding-top: 15px;
@@ -159,6 +172,13 @@ header p {
 .status.error {
     background: #f8d7da;
     color: #721c24;
+}
+
+/* 現在位置マーカー */
+.current-location-icon {
+    background: transparent !important;
+    border: none !important;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
 /* カスタムマーカーアイコン - 同心円配置 */
