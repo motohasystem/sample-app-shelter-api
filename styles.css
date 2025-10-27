@@ -161,7 +161,7 @@ header p {
     color: #721c24;
 }
 
-/* カスタムマーカーアイコン - 円周配置 */
+/* カスタムマーカーアイコン - 同心円配置 */
 .custom-marker-icon {
     background: transparent !important;
     border: none !important;
@@ -169,8 +169,8 @@ header p {
 
 .marker-container {
     position: relative;
-    width: 60px;
-    height: 60px;
+    width: 140px;
+    height: 140px;
 }
 
 .center-pin {

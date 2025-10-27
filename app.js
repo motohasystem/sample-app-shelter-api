@@ -60,7 +60,7 @@ function getDisasterTypes(properties) {
     return disasters;
 }
 
-// カスタムアイコンの作成（円周配置）
+// カスタムアイコンの作成（同心円配置）
 function createCustomIcon(disasters) {
     // 中心ピンと周囲のアイコンを配置
     let html = '<div class="marker-container">';
@@ -69,21 +69,42 @@ function createCustomIcon(disasters) {
     html += '<div class="center-pin">📍</div>';
 
     if (disasters.length > 0) {
-        // 各災害アイコンを円周上に配置
-        const radius = 25; // 円の半径（ピクセル）
-        const angleStep = 360 / disasters.length; // 等間隔の角度
+        // 同心円の設定
+        const circles = [
+            { radius: 25, maxIcons: 6 },  // 内側の円
+            { radius: 45, maxIcons: 8 },  // 中間の円
+            { radius: 65, maxIcons: 12 }  // 外側の円
+        ];
 
-        disasters.forEach((disaster, index) => {
-            const angle = angleStep * index - 90; // -90度で12時方向から開始
-            const angleRad = angle * (Math.PI / 180); // ラジアンに変換
+        let remainingIcons = [...disasters];
+        let iconIndex = 0;
 
-            // 円周上の位置を計算
-            const x = radius * Math.cos(angleRad);
-            const y = radius * Math.sin(angleRad);
+        // 各同心円にアイコンを配置
+        for (const circle of circles) {
+            if (remainingIcons.length === 0) break;
 
-            const icon = DISASTER_ICONS[disaster] || '📍';
-            html += `<div class="disaster-icon" style="left: ${x}px; top: ${y}px;">${icon}</div>`;
-        });
+            // この円に配置するアイコンの数を決定
+            const iconsInThisCircle = Math.min(circle.maxIcons, remainingIcons.length);
+            const angleStep = 360 / iconsInThisCircle;
+
+            // この円周上にアイコンを配置
+            for (let i = 0; i < iconsInThisCircle; i++) {
+                const angle = angleStep * i - 90; // -90度で12時方向から開始
+                const angleRad = angle * (Math.PI / 180); // ラジアンに変換
+
+                // 円周上の位置を計算
+                const x = circle.radius * Math.cos(angleRad);
+                const y = circle.radius * Math.sin(angleRad);
+
+                const disaster = remainingIcons[i];
+                const icon = DISASTER_ICONS[disaster] || '📍';
+                html += `<div class="disaster-icon" style="left: ${x}px; top: ${y}px;">${icon}</div>`;
+                iconIndex++;
+            }
+
+            // 配置済みのアイコンを削除
+            remainingIcons = remainingIcons.slice(iconsInThisCircle);
+        }
     }
 
     html += '</div>';
@@ -91,9 +112,9 @@ function createCustomIcon(disasters) {
     return L.divIcon({
         html: html,
         className: 'custom-marker-icon',
-        iconSize: [60, 60],
-        iconAnchor: [30, 30],
-        popupAnchor: [0, -30]
+        iconSize: [140, 140],  // サイズを大きく（外側の円に対応）
+        iconAnchor: [70, 70],   // アンカーを中心に
+        popupAnchor: [0, -70]   // ポップアップ位置を調整
     });
 }
 
