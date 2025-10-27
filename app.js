@@ -261,6 +261,72 @@ function updateCitySelector(prefectureCode) {
     citySelect.disabled = false;
 }
 
+// URLパラメータを更新
+function updateURLParameter(cityCode) {
+    const url = new URL(window.location);
+    if (cityCode) {
+        url.searchParams.set('city', cityCode);
+    } else {
+        url.searchParams.delete('city');
+    }
+    window.history.pushState({}, '', url);
+}
+
+// URLパラメータから市区町村コードを取得
+function getCityCodeFromURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('city');
+}
+
+// 団体コードから都道府県コードを取得
+function getPrefectureCodeFromCityCode(cityCode) {
+    if (!masterData || !cityCode) return null;
+
+    // 団体コードの最初の2桁が都道府県コード
+    const prefectureCode = cityCode.substring(0, 2);
+
+    // マスターデータに存在するか確認
+    if (masterData[prefectureCode]) {
+        return prefectureCode;
+    }
+
+    return null;
+}
+
+// 市区町村を選択して表示
+function selectAndLoadCity(cityCode) {
+    if (!cityCode || !masterData) return false;
+
+    // 都道府県コードを取得
+    const prefectureCode = getPrefectureCodeFromCityCode(cityCode);
+    if (!prefectureCode) {
+        console.error('Invalid city code:', cityCode);
+        return false;
+    }
+
+    // 都道府県を選択
+    const prefectureSelect = document.getElementById('prefecture');
+    prefectureSelect.value = prefectureCode;
+
+    // 市区町村リストを更新
+    updateCitySelector(prefectureCode);
+
+    // 市区町村を選択
+    const citySelect = document.getElementById('city');
+    const cityOption = Array.from(citySelect.options).find(opt => opt.value === cityCode);
+
+    if (cityOption) {
+        citySelect.value = cityCode;
+        document.getElementById('loadData').disabled = false;
+        updateURLParameter(cityCode);
+        loadShelterData(cityCode);
+        return true;
+    } else {
+        console.error('City not found in options:', cityCode);
+        return false;
+    }
+}
+
 // イベントリスナーの設定
 document.addEventListener('DOMContentLoaded', async () => {
     // 地図の初期化
@@ -282,8 +348,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (cityCode) {
             loadButton.disabled = false;
+            // URLパラメータを更新
+            updateURLParameter(cityCode);
         } else {
             loadButton.disabled = true;
+            // URLパラメータを削除
+            updateURLParameter(null);
         }
     });
 
@@ -299,19 +369,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadShelterData(cityCode);
     });
 
-    // デフォルトで北海道札幌市を選択してデータを読み込み
+    // URLパラメータまたはデフォルトで初期表示
     if (masterData) {
-        document.getElementById('prefecture').value = '01'; // 北海道
-        updateCitySelector('01');
-        // 札幌市を探して選択
-        const citySelect = document.getElementById('city');
-        for (let option of citySelect.options) {
-            if (option.value === '011002') {
-                citySelect.value = '011002';
-                document.getElementById('loadData').disabled = false;
-                loadShelterData('011002');
-                break;
+        const cityCodeFromURL = getCityCodeFromURL();
+
+        if (cityCodeFromURL) {
+            // URLパラメータがある場合、その市区町村を表示
+            const success = selectAndLoadCity(cityCodeFromURL);
+            if (!success) {
+                // URLパラメータが無効な場合、デフォルトを表示
+                selectAndLoadCity('011002');
             }
+        } else {
+            // URLパラメータがない場合、デフォルトで北海道札幌市を選択
+            selectAndLoadCity('011002');
         }
     }
 });
